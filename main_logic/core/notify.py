@@ -67,6 +67,7 @@ from config.prompts.prompts_sys import (
     _loc,
     SESSION_INIT_PROMPT,
     SESSION_INIT_PROMPT_AGENT,
+    SESSION_MUSIC_CAPABILITY,
     AGENT_TASK_STATUS_RUNNING,
     AGENT_TASK_STATUS_QUEUED,
     AGENT_TASKS_HEADER,
@@ -255,6 +256,7 @@ class NotifyMixin:
                 _loc(SESSION_INIT_PROMPT, _lang).format(name=self.lanlan_name)
                 + self.lanlan_prompt
             )
+        prompt += _loc(SESSION_MUSIC_CAPABILITY, _lang)
         if self._is_agent_enabled():
             # Plugin summary (with plugin ids) is intentionally disabled to avoid
             # exposing implementation identifiers in the general agent prompt.

@@ -822,6 +822,8 @@ app.include_router(galgame_router)
 app.include_router(widget_mode_router)
 app.include_router(icebreaker_router)
 app.include_router(game_router)
+from main_routers.sts2_companion_router import router as sts2_companion_router
+app.include_router(sts2_companion_router)
 app.include_router(watch_together_router)
 app.include_router(drawing_guess_router)
 app.include_router(card_assist_router)

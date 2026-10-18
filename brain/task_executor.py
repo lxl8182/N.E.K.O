@@ -42,6 +42,7 @@ from config import (
     AGENT_PLUGIN_FULL_MAX_TOKENS,
     AGENT_EXTERNAL_GATE_ENABLED,
     AGENT_EXTERNAL_GATE_THRESHOLD,
+    AGENT_SESSION_DOMINANT_PLUGIN_IDS,
     TASK_DETAIL_MAX_TOKENS,
 )
 from utils.llm_client import (
@@ -2003,6 +2004,16 @@ class DirectTaskExecutor:
                 return True  # not loaded → can't run keyword shortcut → fail open
             try:
                 from brain.plugin_filter import _match_keywords
+                # 会话主导插件（如陪玩）：运行期间用户每一句都可能是对它的指令或提问，
+                # 用 external_intent 判「是否闲聊」既不准也没意义——「你随便选」「看着办」
+                # 这类委派话术意图分极低却最需要触发工具调用。故直接放行（等同确定性命中）。
+                dominant = AGENT_SESSION_DOMINANT_PLUGIN_IDS
+                if dominant:
+                    for p in plugins:
+                        if not isinstance(p, dict) or p.get("passive"):
+                            continue
+                        if str(p.get("id")) in dominant:
+                            return True
                 for p in plugins:
                     # Skip passive plugins: they never participate in dispatch
                     # (mirrors _assess_user_plugin), so a passive plugin must not

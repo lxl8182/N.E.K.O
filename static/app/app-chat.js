@@ -652,14 +652,10 @@
     /**
      * 解析并处理 AI 文本中的音乐播放指令
      *
-     * 【当前状态 - 预留功能】
-     * 此函数目前未被调用。当前主动搭话音乐功能走的是另一条路径：
+     * 普通对话由 finalizeAssistantTurn 调用。主动搭话音乐走另一条路径：
      *   后端 proactive_chat_prompt_music → 返回搜索关键词 → 后端搜索 → source_links → 前端播放
      *
-     * 【未来用途】
-     * 当需要在普通对话中让 AI 主动触发音乐播放时，需要在角色系统提示词中添加指令说明，
-     * 让 AI 输出 [play_music: {"name": "歌曲名", "artist": "歌手名"}] 格式的指令。
-     * 届时在消息处理流程中调用此函数即可解析并播放音乐。
+     * 会话系统提示词说明 [play_music:] 指令，name 可为歌名或风格搜索关键词。
      *
      * 【指令格式】
      * [play_music: {"name": "歌曲名", "artist": "歌手名"}]
@@ -668,7 +664,11 @@
      *
      * @param {string} text - 可能包含音乐指令的文本
      */
-    window.processMusicCommands = async function (text) {
+    window.processMusicCommands = async function (text, options) {
+        options = options || {};
+        const reportMusic = function (result) {
+            if (options.onResult) options.onResult(Object.assign({kind: 'music'}, result));
+        };
         if (!text) return;
         var musicRegex = /\[play_music:\s*({[\s\S]*?})\]/g;
         var match;
@@ -771,6 +771,7 @@
                     var result = await response.json();
 
                     if (myEpoch !== window._musicSearchEpoch) {
+                        reportMusic({status: 'superseded'});
                         console.log('[Music] 指令搜索结果过时，已丢弃: "' + query + '"');
                         continue;
                     }
@@ -785,6 +786,7 @@
                     }
 
                     if (!result.success) {
+                        reportMusic({status: 'failed'});
                         console.error('[Music] Search API failed:', result.error);
                         if (window.showStatusToast) {
                             var failMsg = window.safeT ? window.safeT('music.searchFailed', '音乐搜索失败') : '音乐搜索失败';
@@ -801,13 +803,17 @@
                         }
                         console.log('[Music] 指令搜歌最终选择:', realTrack.name, '-', realTrack.artist);
 
-                        if (typeof window.dispatchMusicPlay === 'function') {
+                        if (options.onResult && typeof window.dispatchMusicPlayDetailed === 'function') {
+                            const playback = await window.dispatchMusicPlayDetailed(realTrack, {source: options.source});
+                            reportMusic({status: playback.ok ? 'dispatched' : playback.reason || 'failed', name: realTrack.name, artist: realTrack.artist});
+                        } else if (typeof window.dispatchMusicPlay === 'function') {
                             window.dispatchMusicPlay(realTrack);
                         } else {
                             console.warn('[Music] dispatchMusicPlay 不可用，尝试直接发送');
                             window.sendMusicMessage(realTrack);
                         }
                     } else {
+                        reportMusic({status: 'not_found'});
                         if (window.showStatusToast) {
                             var defaultStr = '找不到歌曲: ' + aiTrackInfo.name;
                             var notFoundMsg = window.t ? window.t('music.notFound', {
@@ -821,6 +827,7 @@
                     }
                 }
             } catch (e) {
+                reportMusic({status: 'failed'});
                 console.error('[Music Parser] 音乐指令解析或请求失败:', e);
             }
         }

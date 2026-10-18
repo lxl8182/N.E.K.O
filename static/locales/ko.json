@@ -1,4 +1,31 @@
 {
+    "emotionBubbles": {
+        "affectionate": "애정",
+        "shy": "수줍음",
+        "afraid": "두려움",
+        "confused": "혼란",
+        "tired": "피곤",
+        "proud": "뿌듯함",
+        "playful": "장난",
+        "encouraging": "응원",
+        "thinking": "생각",
+        "curious": "호기심",
+        "disgusted": "싫음",
+        "hungry": "식욕",
+        "title": "감정 스티커",
+        "description": "감정마다 여러 이미지를 추가하세요. 반응할 때 무작위로 선택하며 연속 중복을 피합니다. PNG, GIF, JPEG, WebP를 지원하고 이미지당 최대 8 MB입니다. 없으면 기본 고양이 이미지를 사용합니다.",
+        "happy": "기쁨",
+        "sad": "슬픔",
+        "angry": "화남",
+        "surprised": "놀람",
+        "neutral": "평온",
+        "upload": "이미지 추가",
+        "remove": "삭제",
+        "default": "기본 고양이 이미지",
+        "saving": "저장 중…",
+        "saved": "저장됨",
+        "failed": "실패했습니다. 다시 시도하세요."
+    },
     "chatAvatar": {
         "custom": {
             "upload": "이미지 업로드",

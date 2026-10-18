@@ -1523,7 +1523,9 @@
             }
 
             if (result.success) {
-                if (result.action === 'chat') {
+                if (result.action === 'queued') {
+                    return true;
+                } else if (result.action === 'chat') {
                     console.log('主动搭话已发送:', result.message, result.source_mode ? '(来源: ' + result.source_mode + ')' : '');
 
                     var dispatchedTrackUrl = null;

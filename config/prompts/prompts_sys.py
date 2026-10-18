@@ -155,6 +155,18 @@ RESULT_PARSER_PHRASES = {
     'bu_cancelled':        {'zh': '你的任务"{desc}"已取消', 'zh-TW': '你的任務「{desc}」已取消', 'en': 'Your task "{desc}" cancelled', 'ja': 'タスク「{desc}」がキャンセルされました', 'ko': '작업 "{desc}" 취소됨', 'ru': 'Ваша задача «{desc}» отменена', 'es': 'Tu tarea "{desc}" fue cancelada', 'pt': 'Sua tarefa "{desc}" foi cancelada'},
 }
 
+# ---------- 普通会话内置点歌 ----------
+SESSION_MUSIC_CAPABILITY = {
+    'zh': '\n内置音乐能力：普通对话可以搜索并播放音乐，不依赖Agent插件。用户要求听歌时，在回复中输出一次 [play_music: {"name": "歌曲名或搜索关键词", "artist": "歌手或空字符串"}]，播放器会执行，指令不朗读。随便听就自行挑歌；指定安静等风格时直接选歌或用风格关键词，不反复追问。结合前文理解“安静的”“现在听”等续接请求。不要虚构歌曲库存限制。播放器确认开始播放前，只说准备找歌，不说已经播放。\n',
+    'zh-TW': '\n內建音樂能力：普通對話可以搜尋並播放音樂，不依賴Agent外掛。使用者要求聽歌時，回覆中輸出一次 [play_music: {"name": "歌名或搜尋關鍵詞", "artist": "歌手或空字串"}]，播放器會執行，指令不朗讀。隨便聽就自行挑歌；指定安靜等風格時直接選歌或使用風格關鍵詞，不反覆追問。結合前文理解「安靜的」「現在聽」等續接請求。不要虛構歌曲庫存限制。播放器確認開始播放前，只說準備找歌，不說已經播放。\n',
+    'en': '\nBuilt-in music: ordinary conversation can search and play music without Agent plugins. For a listening request, emit once [play_music: {"name": "song or search keywords", "artist": "artist or empty string"}] in your reply; the player executes it and the directive is not spoken. Choose for random requests; use songs or style keywords for mood requests without repeated questions. Interpret brief follow-ups using conversation context. Do not invent stock limits. Until the player confirms playback, say you will find music, never that it is already playing.\n',
+    'ja': '\n内蔵音楽機能：通常会話からAgentプラグインなしで曲を検索・再生できる。音楽を聴く依頼には返答内で一度 [play_music: {"name": "曲名または検索語", "artist": "歌手または空文字"}] を出力する。指令は読み上げない。おまかせなら選曲し、静かな曲などは曲名や雰囲気の検索語で直接選ぶ。繰り返し質問せず短い返事は前の会話から理解する。在庫制限を作り話しない。プレイヤーの確認までは曲を探すと伝え、再生済みと言わない。\n',
+    'ko': '\n내장 음악 기능: 일반 대화에서 Agent 플러그인 없이 음악을 검색하고 재생할 수 있다. 음악 요청에는 답변에 한 번 [play_music: {"name": "곡명 또는 검색어", "artist": "가수 또는 빈 문자열"}] 를 출력한다. 명령은 낭독하지 않는다. 아무 곡 요청은 직접 고르고 분위기는 곡이나 검색어로 선택한다. 반복 질문하지 말고 짧은 후속 요청은 대화 맥락으로 이해한다. 보유 곡 제한을 꾸며내지 않는다. 플레이어 확인 전에는 곡을 찾겠다고 말하고 이미 재생 중이라고 하지 않는다.\n',
+    'ru': '\nВстроенная музыка: обычный диалог может искать и включать музыку без плагинов Agent. По просьбе послушать музыку один раз добавь [play_music: {"name": "песня или поисковые слова", "artist": "исполнитель или пустая строка"}]. Команда не озвучивается. Выбирай песню самостоятельно или используй стиль без повторных вопросов. Учитывай контекст коротких ответов. Не выдумывай ограничения запаса песен. До подтверждения плеера говори о поиске, а не о начавшемся воспроизведении.\n',
+    'es': '\nMúsica integrada: la conversación normal puede buscar y reproducir música sin plugins de Agent. Emite una vez [play_music: {"name": "canción o palabras de búsqueda", "artist": "artista o cadena vacía"}] ante una petición de escuchar música. La orden no se lee en voz alta. Elige una canción o usa estilos sin preguntas repetidas. Interpreta respuestas breves según el contexto. No inventes límites de canciones disponibles. Hasta la confirmación del reproductor, habla de buscar música, no de que ya suena.\n',
+    'pt': '\nMúsica integrada: a conversa normal pode buscar e tocar música sem plugins do Agent. Emita uma vez [play_music: {"name": "música ou termos de busca", "artist": "artista ou string vazia"}] ao receber um pedido para ouvir música. O comando não é lido em voz alta. Escolha uma música ou use estilos sem perguntas repetidas. Entenda respostas curtas pelo contexto. Não invente limites de estoque. Até a confirmação do player, diga que vai buscar música, nunca que já está tocando.\n',
+}
+
 # ---------- 语音会话初始 prompt ----------
 SESSION_INIT_PROMPT = {
     'zh': '你是一个角色扮演大师。请按要求扮演以下角色（{name}）。',

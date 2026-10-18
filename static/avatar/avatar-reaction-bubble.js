@@ -6,8 +6,9 @@
     const TIMING = Object.freeze({
         minVisibleMs: 360,
         minThinkingVisibleMs: 220,
+        minEmotionVisibleMs: 5000,
         fadeDurationMs: 220,
-        maxVisibleMs: 10000,
+        maxVisibleMs: 20000,
         maxThinkingMs: 10000,
         textOnlyHoldMs: 600,
         textOnlyFallbackMs: 3200,
@@ -123,6 +124,7 @@
         phase: 'idle',
         theme: 'thinking',
         emotion: null,
+        bubbleEmotion: null,
         showEmotionArt: false,
         content: '',
         side: 'right',
@@ -131,6 +133,10 @@
         shownAt: 0,
         turnEndedAt: 0,
         speechStartedAt: 0,
+        speechEnded: false,
+        artShownAt: 0,
+        artPending: false,
+        hideAfterArtMs: null,
         followRafId: 0,
         followPacedCancel: null,
         followUntilAt: 0,
@@ -168,6 +174,17 @@
     };
 
     let bubbleEl = null;
+    let latestTurnId = null;
+    let latestTurnEndedAt = 0;
+    let latestSpeechEnded = false;
+    let deferredTurn = null;
+    let deferredTurnTimer = 0;
+
+    function cancelDeferredTurn() {
+        clearTimeout(deferredTurnTimer);
+        deferredTurnTimer = 0;
+        deferredTurn = null;
+    }
     let frameEl = null;
     let shellEl = null;
     let stageEl = null;
@@ -446,6 +463,8 @@
         ensureDom();
 
         bubbleEl.dataset.theme = state.theme || 'thinking';
+        bubbleEl.dataset.bubbleEmotion = state.bubbleEmotion || state.theme;
+        if (window.nekoEmotionBubbleImages) window.nekoEmotionBubbleImages.apply(bubbleEl, state.bubbleEmotion || state.theme, state.turnId, state.theme);
         bubbleEl.dataset.phase = state.phase || 'idle';
         bubbleEl.dataset.side = state.side || 'right';
         contentEl.textContent = state.content || '';
@@ -2280,6 +2299,8 @@
     }
 
     function handleGoodbye() {
+        cancelDeferredTurn();
+        latestTurnId = null;
         forceHide(true);
     }
 
@@ -2292,10 +2313,15 @@
         state.phase = 'idle';
         state.theme = 'thinking';
         state.emotion = null;
+        state.bubbleEmotion = null;
         state.showEmotionArt = false;
         state.content = '';
         state.turnEndedAt = 0;
         state.speechStartedAt = 0;
+        state.speechEnded = false;
+        state.artShownAt = 0;
+        state.artPending = false;
+        state.hideAfterArtMs = null;
         state.lastRenderX = null;
         state.lastRenderY = null;
         state.lastRenderWidth = null;
@@ -2371,6 +2397,11 @@
             return;
         }
 
+        if (state.artPending) {
+            state.hideAfterArtMs = Math.max(state.hideAfterArtMs || 0, extraHoldMs || 0);
+            return;
+        }
+
         clearTimer('hideTimerId');
         clearTimer('textFallbackTimerId');
         clearTimer('timeoutTimerId');
@@ -2383,8 +2414,9 @@
             return;
         }
 
-        var elapsed = now() - state.shownAt;
-        var preFadeDelay = Math.max(0, TIMING.minVisibleMs - elapsed) + Math.max(0, extraHoldMs || 0);
+        var visibleFrom = state.artShownAt || state.shownAt;
+        var minimum = state.showEmotionArt ? TIMING.minEmotionVisibleMs : TIMING.minVisibleMs;
+        var preFadeDelay = Math.max(0, minimum - (now() - visibleFrom)) + Math.max(0, extraHoldMs || 0);
 
         state.hideTimerId = window.setTimeout(function () {
             if (normalizedTurnId && state.turnId !== normalizedTurnId) {
@@ -2452,7 +2484,8 @@
 
         state.emotion = state.emotion || 'neutral';
         state.theme = 'neutral';
-        state.showEmotionArt = true;
+        // Wait for the classified result; a timeout must not bypass the display probability.
+        state.showEmotionArt = false;
         state.phase = 'emotion-ready';
         state.content = getThemeContent(state.theme);
         applyVisualState();
@@ -2478,6 +2511,7 @@
     }
 
     function showThinking(turnId) {
+        if (window.nekoEmotionBubbleImages && window.nekoEmotionBubbleImages.isSuppressed(turnId)) return;
         if (!syncEnabledFromSettings() || isGoodbyeActive()) {
             return;
         }
@@ -2495,12 +2529,17 @@
         state.phase = 'thinking';
         state.theme = 'thinking';
         state.emotion = null;
+        state.bubbleEmotion = null;
         state.showEmotionArt = false;
         state.content = getThemeContent('thinking');
         state.side = 'right';
         state.shownAt = now();
         state.turnEndedAt = 0;
         state.speechStartedAt = 0;
+        state.speechEnded = false;
+        state.artShownAt = 0;
+        state.artPending = false;
+        state.hideAfterArtMs = null;
 
         applyVisualState();
         syncPositionOnce();
@@ -2520,11 +2559,47 @@
         if (!turnId) {
             return;
         }
+        if (latestTurnId !== turnId) {
+            latestTurnEndedAt = 0;
+            latestSpeechEnded = false;
+        }
+        latestTurnId = turnId;
+        if (window.nekoEmotionBubbleImages) {
+            window.nekoEmotionBubbleImages.rememberTurn(turnId, detail.meta);
+            if (window.nekoEmotionBubbleImages.isSuppressed(turnId)) {
+                cancelDeferredTurn();
+                if (state.turnId === turnId) beginHide(turnId, 0);
+                return;
+            }
+        }
+        var remaining = state.showEmotionArt && state.artShownAt
+            ? TIMING.minEmotionVisibleMs - (now() - state.artShownAt) : 0;
+        if (state.turnId !== turnId && state.visible && remaining > 0) {
+            cancelDeferredTurn();
+            deferredTurn = { detail: detail };
+            deferredTurnTimer = window.setTimeout(function () {
+                var pending = deferredTurn;
+                deferredTurn = null;
+                deferredTurnTimer = 0;
+                if (!pending || latestTurnId !== turnId) return;
+                handleTurnStart(pending.detail);
+                if (pending.end) handleTurnEnd(pending.end);
+                if (pending.speechStart) handleSpeechStart(pending.speechStart);
+                if (pending.emotion) handleEmotionReady(pending.emotion);
+                if (pending.speechEnd) handleSpeechEnd(pending.speechEnd);
+            }, remaining);
+            return;
+        }
+        cancelDeferredTurn();
         showThinking(turnId);
     }
 
     function handleEmotionReady(detail) {
         var turnId = normalizeTurnId(detail && detail.turnId);
+        if (deferredTurn && normalizeTurnId(deferredTurn.detail.turnId) === turnId) {
+            deferredTurn.emotion = detail;
+            return;
+        }
         logBubbleLifecycle('handleEmotionReady:enter', {
             detailTurnId: turnId,
             detailEmotion: detail && detail.emotion ? String(detail.emotion) : null
@@ -2532,6 +2607,12 @@
         if (isGoodbyeActive()) {
             forceHide(true);
             return;
+        }
+        // Classification runs after turn-end and can finish after the thinking bubble has expired.
+        if (turnId && latestTurnId === turnId && (!state.visible || state.phase === 'fading')) {
+            showThinking(turnId);
+            state.turnEndedAt = latestTurnEndedAt;
+            state.speechEnded = latestSpeechEnded;
         }
         if (!turnId || state.turnId !== turnId || !state.visible || state.phase === 'fading') {
             logBubbleLifecycle('handleEmotionReady:skip', {
@@ -2544,7 +2625,7 @@
         clearTimer('emotionFallbackTimerId');
         clearTimer('emotionSwapTimerId');
 
-        var applyEmotionState = function () {
+        var applyEmotionState = async function () {
             if (isGoodbyeActive()) {
                 forceHide(true);
                 return;
@@ -2556,20 +2637,44 @@
                 return;
             }
 
+            if (window.nekoEmotionBubbleImages) {
+                window.nekoEmotionBubbleImages.rememberTurn(turnId, detail.meta);
+                if (!window.nekoEmotionBubbleImages.displayForTurn(turnId, detail.emotion, detail.bubbleEmotion)) {
+                    forceHide(true);
+                    return;
+                }
+            }
+            state.artPending = true;
+            state.shownAt = now();
+            scheduleMaxVisibleFallback(turnId);
+            if (window.nekoEmotionBubbleImages) {
+                await window.nekoEmotionBubbleImages.prepare(detail.bubbleEmotion || detail.emotion, turnId, detail.emotion);
+            }
+            if (state.turnId !== turnId || !state.visible || isGoodbyeActive()) return;
+            var holdAfterArt = state.hideAfterArtMs;
+            state.artPending = false;
+            state.hideAfterArtMs = null;
+            clearTimer('hideTimerId');
             state.emotion = detail && detail.emotion ? String(detail.emotion) : null;
+            state.bubbleEmotion = detail && detail.bubbleEmotion ? String(detail.bubbleEmotion) : state.emotion;
             state.theme = normalizeTheme(state.emotion);
             state.showEmotionArt = state.theme !== 'thinking';
+            state.artShownAt = state.shownAt = now();
             state.phase = 'emotion-ready';
             state.content = getThemeContent(state.theme);
             applyVisualState();
+            if (state.visible && state.enabled && state.showEmotionArt && window.nekoEmotionBubbleImages) {
+                window.nekoEmotionBubbleImages.recordDisplay(turnId, state.emotion, state.bubbleEmotion);
+            }
             syncPositionOnce();
             keepFollowingWhileVisible();
+            scheduleMaxVisibleFallback(turnId);
             logBubbleLifecycle('handleEmotionReady:applied', {
                 detailTurnId: turnId
             });
 
-            if (state.turnEndedAt > 0 && state.speechStartedAt <= 0) {
-                beginHide(turnId, TIMING.textOnlyHoldMs);
+            if (holdAfterArt !== null || state.speechEnded || (state.turnEndedAt > 0 && state.speechStartedAt <= 0)) {
+                beginHide(turnId, holdAfterArt === null ? TIMING.textOnlyHoldMs : holdAfterArt);
             }
         };
 
@@ -2585,6 +2690,12 @@
 
     function handleSpeechStart(detail) {
         var turnId = normalizeTurnId(detail && detail.turnId);
+        if (deferredTurn && normalizeTurnId(deferredTurn.detail.turnId) === turnId) {
+            deferredTurn.speechStart = detail;
+            return;
+        }
+        if (latestTurnId && latestTurnId !== turnId) return;
+        if (window.nekoEmotionBubbleImages && window.nekoEmotionBubbleImages.isSuppressed(turnId)) return;
         logBubbleLifecycle('handleSpeechStart:enter', {
             detailTurnId: turnId
         });
@@ -2609,6 +2720,8 @@
         }
 
         state.speechStartedAt = now();
+        state.speechEnded = false;
+        latestSpeechEnded = false;
         if (state.theme === 'thinking') {
             scheduleEmotionFallback(
                 turnId,
@@ -2628,6 +2741,11 @@
 
     function handleTurnEnd(detail) {
         var turnId = normalizeTurnId(detail && detail.turnId);
+        if (latestTurnId === turnId) latestTurnEndedAt = now();
+        if (deferredTurn && normalizeTurnId(deferredTurn.detail.turnId) === turnId) {
+            deferredTurn.end = detail;
+            return;
+        }
         logBubbleLifecycle('handleTurnEnd:enter', {
             detailTurnId: turnId
         });
@@ -2638,6 +2756,13 @@
             return;
         }
 
+        if (window.nekoEmotionBubbleImages) {
+            window.nekoEmotionBubbleImages.rememberTurn(turnId, detail.meta);
+            if (window.nekoEmotionBubbleImages.isSuppressed(turnId)) {
+                forceHide(true);
+                return;
+            }
+        }
         state.turnEndedAt = now();
         logBubbleLifecycle('handleTurnEnd:applied', {
             detailTurnId: turnId
@@ -2650,6 +2775,11 @@
 
     function handleSpeechEnd(detail) {
         var turnId = normalizeTurnId(detail && detail.turnId);
+        if (latestTurnId === turnId) latestSpeechEnded = true;
+        if (deferredTurn && normalizeTurnId(deferredTurn.detail.turnId) === turnId) {
+            deferredTurn.speechEnd = detail;
+            return;
+        }
         logBubbleLifecycle('handleSpeechEnd:enter', {
             detailTurnId: turnId
         });
@@ -2659,11 +2789,16 @@
             });
             return;
         }
+        state.speechEnded = true;
         beginHide(turnId, TIMING.speechEndHoldMs);
     }
 
     function handleSpeechCancel(detail) {
         var turnId = normalizeTurnId(detail && detail.turnId);
+        if (deferredTurn && normalizeTurnId(deferredTurn.detail.turnId) === turnId) {
+            cancelDeferredTurn();
+        }
+        if (latestTurnId === turnId) latestTurnId = null;
         logBubbleLifecycle('handleSpeechCancel:enter', {
             detailTurnId: turnId
         });
@@ -2679,6 +2814,8 @@
     function handleSettingChanged(detail) {
         state.enabled = !!(detail && detail.enabled === true);
         if (!state.enabled) {
+            cancelDeferredTurn();
+            latestTurnId = null;
             forceHide(true);
         }
     }
@@ -2743,8 +2880,9 @@
         window.addEventListener('blur', handleAvatarPointerEnd);
         document.addEventListener('wheel', handleAvatarWheel, { capture: true, passive: true });
         document.addEventListener('visibilitychange', function () {
-            if (document.hidden) {
-                forceHide(false);
+            if (!document.hidden && state.visible) {
+                syncPositionOnce();
+                keepFollowingWhileVisible();
             }
         });
     }

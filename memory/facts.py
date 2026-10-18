@@ -73,6 +73,7 @@ from utils.language_utils import (
     detect_prompt_language_with_ascii_fallback,
     get_global_language_full,
 )
+from memory.fact_suppression import is_suppressed as _fact_extraction_suppressed
 from utils.config_manager import get_config_manager
 from utils.file_utils import (
     atomic_write_json,
@@ -467,6 +468,27 @@ class FactStore:
                 active.remove(key)
 
     # ── persistence ──────────────────────────────────────────────────
+
+    def _fact_extraction_gated(self, lanlan_name: str) -> bool:
+        """Whether a running game/companion plugin has switched fact extraction off.
+
+        See :mod:`memory.fact_suppression`. When suppressed, the conversation
+        extraction entries return ``[]`` / ``None`` *without* calling the LLM,
+        so plugin-driven game dialogue still reaches ``recent.json`` but never
+        settles into ``facts.json``. External-import entry points deliberately
+        do not consult this gate — an explicit import is a user action.
+        """
+        try:
+            suppressed = _fact_extraction_suppressed(self._config_manager.memory_dir)
+        except Exception as exc:  # pragma: no cover - never break extraction on the gate
+            logger.debug(f"[FactStore] fact-suppression gate read failed: {exc}")
+            return False
+        if suppressed:
+            logger.debug(
+                f"[FactStore] {lanlan_name}: fact extraction suppressed by "
+                f"active game plugin — skipping this window"
+            )
+        return suppressed
 
     def _facts_path(self, name: str) -> str:
         from memory import ensure_character_dir
@@ -3256,6 +3278,15 @@ class FactStore:
         if not segments:
             return []
 
+        if self._fact_extraction_gated(lanlan_name):
+            # Active game plugin suppresses facts: report every segment as a
+            # clean empty result so the caller advances its cursor normally
+            # (no retry, no facts persisted).
+            return [
+                {'status': 'ok', 'created': [], 'reconciled': [], 'dropped': 0}
+                for _ in segments
+            ]
+
         segment_generations = [
             (
                 self._subject_forget_generation(lanlan_name, memory_subject)
@@ -4737,6 +4768,11 @@ class FactStore:
         - dispatch failure (caller side) → the caller doesn't call amark;
           retried next round
         """
+        if self._fact_extraction_gated(lanlan_name):
+            # Game plugin active: skip Stage-1+Stage-2 entirely. A clean empty
+            # result lets the caller advance its cursor without retry.
+            return [], [], []
+
         extracted = await self._allm_extract_facts(lanlan_name, messages)
         if extracted is None:
             # Stage-1 terminal failure — caller MUST NOT advance cursor
@@ -4881,6 +4917,12 @@ class FactStore:
         ``reconciled_facts`` receives snapshots of existing rows whose
         provenance this extraction reconciled.
         """  # noqa: DOCSTRING_CJK
+        if self._fact_extraction_gated(lanlan_name):
+            # Game plugin active. An empty list is the "genuine empty
+            # extraction" verdict for both fail_closed modes: no facts written,
+            # caller advances its cursor without a retry.
+            return []
+
         memory_subject = coerce_subject(subject)
         expected_subject_generation = (
             self._subject_forget_generation(lanlan_name, memory_subject)
@@ -5428,6 +5470,12 @@ class FactStore:
             permanently skipping those messages (CodeRabbit / Codex P1 round-2 +
             Codex P1 round-9 on PR #1408).
         """
+        if self._fact_extraction_gated(lanlan_name):
+            # Game plugin active. ``[]`` is the "extracted 0, advance the
+            # cursor" verdict — distinct from ``None`` (terminal failure),
+            # so the caller does not retry the suppressed window.
+            return []
+
         extracted = await self._allm_extract_facts_with_known_pool(
             lanlan_name, messages, known_pool,
         )

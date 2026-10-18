@@ -1,4 +1,31 @@
 {
+    "emotionBubbles": {
+        "affectionate": "Affectionate",
+        "shy": "Shy",
+        "afraid": "Afraid",
+        "confused": "Confused",
+        "tired": "Tired",
+        "proud": "Proud",
+        "playful": "Playful",
+        "encouraging": "Encouraging",
+        "thinking": "Thinking",
+        "curious": "Curious",
+        "disgusted": "Disgusted",
+        "hungry": "Hungry",
+        "title": "Emotion stickers",
+        "description": "Add multiple images per emotion. Each reaction picks one at random without repeating the last image. PNG, GIF, JPEG and WebP are supported, up to 8 MB each. Empty emotions use the default cat image.",
+        "happy": "Happy",
+        "sad": "Sad",
+        "angry": "Angry",
+        "surprised": "Surprised",
+        "neutral": "Neutral",
+        "upload": "Add images",
+        "remove": "Remove",
+        "default": "Default cat image",
+        "saving": "Saving…",
+        "saved": "Saved",
+        "failed": "Operation failed. Try again."
+    },
     "chatAvatar": {
         "custom": {
             "upload": "Upload image",

@@ -1,4 +1,31 @@
 {
+    "emotionBubbles": {
+        "affectionate": "亲昵",
+        "shy": "害羞",
+        "afraid": "害怕",
+        "confused": "疑惑",
+        "tired": "疲倦",
+        "proud": "得意",
+        "playful": "调皮",
+        "encouraging": "鼓励",
+        "thinking": "思考",
+        "curious": "好奇",
+        "disgusted": "嫌弃",
+        "hungry": "馋嘴",
+        "title": "情绪表情包",
+        "description": "每种情绪可添加多张图片，触发时随机显示，避免连续重复。支持 PNG、GIF、JPEG、WebP，单张最多 8 MB；没有图片时使用默认猫图。",
+        "happy": "开心",
+        "sad": "难过",
+        "angry": "生气",
+        "surprised": "惊讶",
+        "neutral": "平静",
+        "upload": "添加图片",
+        "remove": "删除",
+        "default": "使用默认猫图",
+        "saving": "正在保存…",
+        "saved": "已保存",
+        "failed": "操作失败，请重试"
+    },
     "chatAvatar": {
         "custom": {
             "upload": "上传图片",

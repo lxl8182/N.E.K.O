@@ -1868,6 +1868,8 @@
                         emitAssistantLifecycleEvent('neko-assistant-emotion-ready', {
                             turnId: assistantTurnId,
                             emotion: emotionResult.emotion,
+                            bubbleEmotion: emotionResult.bubble_emotion || emotionResult.emotion,
+                            meta: options.meta,
                             source: 'emotion_analysis'
                         });
                     }
@@ -3144,6 +3146,10 @@
                     return;
                 }
 
+                if (response.type === 'companion_media') {
+                    window.handleCompanionMedia(response);
+                    return;
+                }
                 if (response.type === 'chat_blocks') {
                     // NOT gated on suppressAssistantStreamUntilNextSession.
                     // That latch stops a finished session's ASSISTANT stream
@@ -5255,7 +5261,7 @@
                     // 与正常 'turn end' 走同一套收尾（emotion + 字幕）。music 关闭——
                     // 主动消息不自动放歌；也不在此调 scheduleProactiveChat（见上方
                     // "skipping proactive chat schedule"），防 proactive 自触发。
-                    finalizeAssistantTurn(agentCallbackTurnId, { enableMusic: false, enableReactions: false });
+                    finalizeAssistantTurn(agentCallbackTurnId, { enableMusic: false, enableReactions: false, meta: response.meta });
 
                 // -------- system turn end --------
                 } else if (response.type === 'system' && response.data === 'turn end') {
@@ -5306,7 +5312,7 @@
                     // 若再走普通聊天 finalizeAssistantTurn，会用 Gemini buffer /
                     // 当前聊天气泡的旧文本二次翻译，覆盖破冰字幕。
                     if (!isNewUserIcebreakerMirrorTurnEnd(response)) {
-                        finalizeAssistantTurn(assistantTurnId);
+                        finalizeAssistantTurn(assistantTurnId, {meta: response.meta});
                     }
 
                     // AI turn_end 后只 reschedule，不 reset backoff。

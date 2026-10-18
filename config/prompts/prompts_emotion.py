@@ -20,6 +20,21 @@ from __future__ import annotations
 from config import proactive_settings
 from config.prompts.prompts_sys import _loc
 
+BUBBLE_EMOTIONS = ("happy", "sad", "angry", "surprised", "neutral", "affectionate", "shy",
+                   "afraid", "confused", "tired", "proud", "playful", "encouraging", "thinking",
+                   "curious", "disgusted", "hungry")
+
+BUBBLE_EMOTION_GUIDANCE = {
+    'zh': '另外返回bubble_emotion，用于气泡表情包。可细分为亲昵affectionate、害羞shy、害怕afraid、疑惑confused、疲倦tired、得意proud、调皮playful、鼓励encouraging、思考thinking、好奇curious、嫌弃disgusted、馋嘴hungry；不符合细类时填原emotion。emotion仍只用原有五类。只按角色实际表达选择，不因文本提到情绪词就选它。',
+    'zh-TW': '另外回傳bubble_emotion，用於氣泡表情包。可細分為親暱affectionate、害羞shy、害怕afraid、疑惑confused、疲倦tired、得意proud、調皮playful、鼓勵encouraging、思考thinking、好奇curious、嫌棄disgusted、嘴饞hungry；不符合細類時填原emotion。emotion仍只用原有五類。只按角色實際表達選擇，不因文字提到情緒詞就選它。',
+    'en': 'Also return bubble_emotion for the reaction sticker: affectionate, shy, afraid, confused, tired, proud, playful, encouraging, thinking, curious, disgusted or hungry. If none fits, use emotion. Keep emotion in the original five categories. Choose the companion\'s actual expression, not merely an emotion mentioned in the text.',
+    'ja': '気泡スタンプ用のbubble_emotionも返す：親愛affectionate、照れshy、恐れafraid、困惑confused、疲れtired、得意proud、いたずらplayful、応援encouraging、思考thinking、好奇心curious、嫌悪disgusted、食欲hungry。該当しなければemotionと同じ値にする。emotionは元の5分類を維持。言及された感情ではなく、キャラクター自身の表現を選ぶ。',
+    'ko': '말풍선 스티커용 bubble_emotion도 반환: 애정affectionate, 수줍음shy, 두려움afraid, 혼란confused, 피곤tired, 뿌듯함proud, 장난playful, 응원encouraging, 생각thinking, 호기심curious, 싫음disgusted, 식욕hungry. 해당 없으면 emotion 값을 사용. emotion은 기존 다섯 분류를 유지. 언급된 감정이 아닌 캐릭터가 실제 표현하는 감정을 선택.',
+    'ru': 'Также верните bubble_emotion для стикера: affectionate (нежность), shy (смущение), afraid (страх), confused (недоумение), tired (усталость), proud (гордость), playful (шутливость), encouraging (поддержка), thinking (размышление), curious (любопытство), disgusted (неприязнь), hungry (аппетит). Иначе используйте emotion. emotion остаётся одной из исходных пяти категорий. Выбирайте собственную выраженную реакцию персонажа, а не упомянутое чувство.',
+    'es': 'Devuelve también bubble_emotion para la pegatina: affectionate (cariño), shy (timidez), afraid (miedo), confused (confusión), tired (cansancio), proud (orgullo), playful (broma), encouraging (ánimo), thinking (reflexión), curious (curiosidad), disgusted (desagrado), hungry (apetito). Si no encaja, usa emotion. emotion conserva las cinco categorías originales. Elige la expresión propia del personaje, no una emoción simplemente mencionada.',
+    'pt': 'Retorne também bubble_emotion para a figurinha: affectionate (carinho), shy (timidez), afraid (medo), confused (confusão), tired (cansaço), proud (orgulho), playful (brincadeira), encouraging (incentivo), thinking (reflexão), curious (curiosidade), disgusted (desagrado), hungry (apetite). Caso contrário, use emotion. emotion mantém as cinco categorias originais. Escolha a expressão do personagem, não uma emoção apenas mencionada.',
+}
+
 
 OUTWARD_EMOTION_ANALYSIS_PROMPT = {
     'zh': """你是一个情感分析专家。请判断输入的角色回复中说话者自身最主导、最外显的一种情绪，并只返回 JSON：{"emotion": "情感类型", "confidence": 置信度, "emoji": null}。
@@ -218,7 +233,7 @@ def get_outward_emotion_analysis_prompt(lang: str = 'zh') -> str:
     )
     return _loc(OUTWARD_EMOTION_ANALYSIS_PROMPT, lang).replace(
         '{reaction_emojis}', ' '.join(emojis)
-    )
+    ) + '\n' + _loc(BUBBLE_EMOTION_GUIDANCE, lang)
 
 
 outward_emotion_analysis_prompt = get_outward_emotion_analysis_prompt('zh')

@@ -120,6 +120,22 @@ def test_det_signal_failopen_when_plugins_unloaded():
 def test_det_signal_none_when_no_shortcuts():
     ex = _exec()
     assert ex._deterministic_action_signal("今天好开心", openclaw_enabled=False, user_plugin_enabled=False) is False
+
+
+def test_det_signal_failopen_for_session_dominant_plugin():
+    ex = _exec()
+    # 会话主导插件（如尖塔陪玩）运行期间，用户每一句都可能是对它的指令/提问：
+    # 「你随便选」「看着办」这类委派话术 external_intent 极低，却最需要触发工具调用。
+    # 故只要它在运行，就无条件放行——绝不因它没匹配关键词而刹车。
+    ex.plugin_list = [{"id": "sts2_autoplay"}]  # no top-level keywords
+    assert ex._deterministic_action_signal("你随便选", openclaw_enabled=False, user_plugin_enabled=True) is True
+    assert ex._deterministic_action_signal("今天好无聊", openclaw_enabled=False, user_plugin_enabled=True) is True
+    # passive 标不能触发放行（主导插件必须是可派发的）。
+    ex.plugin_list = [{"id": "sts2_autoplay", "passive": True}]
+    assert ex._deterministic_action_signal("今天好无聊", openclaw_enabled=False, user_plugin_enabled=True) is False
+    # user_plugin 关时一律不生效。
+    ex.plugin_list = [{"id": "sts2_autoplay"}]
+    assert ex._deterministic_action_signal("你随便选", openclaw_enabled=False, user_plugin_enabled=False) is False
     # empty / whitespace text is never an action signal
     assert ex._deterministic_action_signal("   ", openclaw_enabled=True, user_plugin_enabled=True) is False
 

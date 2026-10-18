@@ -39,6 +39,7 @@ from config import (
     MESSAGE_REACTION_EMOJIS_BY_EMOTION,
 )
 from config.prompts.prompts_emotion import (
+    BUBBLE_EMOTIONS,
     get_outward_emotion_analysis_prompt,
     get_emotion_keywords_flat,
     get_angry_attack_patterns_flat,
@@ -597,7 +598,7 @@ def _normalize_emotion_label(raw_emotion, raw_confidence=None):
     return "neutral"
 
 
-def _push_emotion_update(lanlan_name, emotion, confidence):
+def _push_emotion_update(lanlan_name, emotion, confidence, bubble_emotion=None):
     sync_message_queue = get_sync_message_queue()
     if lanlan_name and lanlan_name in sync_message_queue:
         sync_message_queue[lanlan_name].put({
@@ -605,17 +606,20 @@ def _push_emotion_update(lanlan_name, emotion, confidence):
             "data": {
                 "type": "emotion",
                 "emotion": emotion,
-                "confidence": confidence
+                "confidence": confidence,
+                **({"bubble_emotion": bubble_emotion} if bubble_emotion else {})
             }
         })
 
 
-def _emotion_response(emotion, confidence, lanlan_name=None, model_emoji=None):
+def _emotion_response(emotion, confidence, lanlan_name=None, model_emoji=None, bubble_emotion=None):
     response = {
         "emotion": emotion,
         "confidence": confidence,
         "reaction": None
     }
+    if isinstance(bubble_emotion, str) and bubble_emotion in BUBBLE_EMOTIONS:
+        response["bubble_emotion"] = bubble_emotion
     # Optional annotation failures must not discard the avatar decision.
     try:
         if (not lanlan_name or emotion not in _EMOTION_CANONICAL_LABELS
@@ -1003,6 +1007,7 @@ async def emotion_analysis(request: Request):
         
         reaction_eligible = False
         model_emoji = None
+        bubble_emotion = None
 
         # 尝试解析JSON响应
         emotion = "neutral"
@@ -1025,6 +1030,9 @@ async def emotion_analysis(request: Request):
             else:
                 # 获取emotion和confidence
                 model_emoji = result.get("emoji")
+                detail_emotion = result.get("bubble_emotion")
+                if isinstance(detail_emotion, str) and detail_emotion in BUBBLE_EMOTIONS:
+                    bubble_emotion = detail_emotion
                 raw_emotion = result.get("emotion", "neutral")
                 raw_confidence = result.get("confidence", 0.5)
                 emotion = _normalize_emotion_label(raw_emotion, raw_confidence)
@@ -1088,9 +1096,13 @@ async def emotion_analysis(request: Request):
         # Avatar heuristics may recover a decision, but must not grant a
         # message reaction on a corrected or degraded model result.
         reaction_eligible = reaction_eligible and decision_source == "model"
-        _push_emotion_update(lanlan_name, emotion, confidence)
+        if decision_source != "model" or confidence < 0.2:
+            bubble_emotion = None
+        logger.info("[EmotionAnalysis] name=%s emotion=%s bubble=%s confidence=%.2f source=%s",
+                    lanlan_name, emotion, bubble_emotion, confidence, decision_source)
+        _push_emotion_update(lanlan_name, emotion, confidence, bubble_emotion)
         return _emotion_response(
-            emotion, confidence, lanlan_name if reaction_eligible else None, model_emoji
+            emotion, confidence, lanlan_name if reaction_eligible else None, model_emoji, bubble_emotion
         )
             
     except Exception as e:

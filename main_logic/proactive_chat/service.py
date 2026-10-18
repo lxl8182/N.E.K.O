@@ -542,6 +542,11 @@ async def handle_proactive_chat(
                 status_code=entry_result.status_code,
             )
 
+        from .companion import offer_companion_proactive
+        companion_result = await offer_companion_proactive(command, lanlan_name, logger)
+        if companion_result is not None:
+            return companion_result
+
         try:
             game_route_active = bool(game_route_active_for(lanlan_name))
         except Exception as game_route_err:

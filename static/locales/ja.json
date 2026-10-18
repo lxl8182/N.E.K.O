@@ -1,4 +1,31 @@
 {
+    "emotionBubbles": {
+        "affectionate": "親愛",
+        "shy": "照れ",
+        "afraid": "恐れ",
+        "confused": "困惑",
+        "tired": "疲れ",
+        "proud": "得意",
+        "playful": "いたずら",
+        "encouraging": "応援",
+        "thinking": "思考",
+        "curious": "好奇心",
+        "disgusted": "嫌悪",
+        "hungry": "食欲",
+        "title": "感情スタンプ",
+        "description": "感情ごとに複数の画像を追加できます。反応時にランダム表示し、連続重複を避けます。PNG・GIF・JPEG・WebP、1枚8 MBまで。未設定時は標準の猫画像を使います。",
+        "happy": "嬉しい",
+        "sad": "悲しい",
+        "angry": "怒り",
+        "surprised": "驚き",
+        "neutral": "平静",
+        "upload": "画像を追加",
+        "remove": "削除",
+        "default": "標準の猫画像",
+        "saving": "保存中…",
+        "saved": "保存しました",
+        "failed": "失敗しました。再試行してください。"
+    },
     "chatAvatar": {
         "custom": {
             "upload": "画像をアップロード",

@@ -1,4 +1,31 @@
 {
+    "emotionBubbles": {
+        "affectionate": "Cariño",
+        "shy": "Timidez",
+        "afraid": "Miedo",
+        "confused": "Confusión",
+        "tired": "Cansancio",
+        "proud": "Orgullo",
+        "playful": "Broma",
+        "encouraging": "Ánimo",
+        "thinking": "Reflexión",
+        "curious": "Curiosidad",
+        "disgusted": "Desagrado",
+        "hungry": "Apetito",
+        "title": "Pegatinas de emociones",
+        "description": "Añade varias imágenes por emoción. Cada reacción elige una al azar sin repetir la anterior. PNG, GIF, JPEG y WebP, hasta 8 MB cada una. Sin imágenes se usa el gato predeterminado.",
+        "happy": "Alegría",
+        "sad": "Tristeza",
+        "angry": "Enfado",
+        "surprised": "Sorpresa",
+        "neutral": "Calma",
+        "upload": "Añadir imágenes",
+        "remove": "Eliminar",
+        "default": "Gato predeterminado",
+        "saving": "Guardando…",
+        "saved": "Guardado",
+        "failed": "Error. Inténtalo de nuevo."
+    },
     "chatAvatar": {
         "custom": {
             "upload": "Subir imagen",

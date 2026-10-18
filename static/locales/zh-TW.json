@@ -1,4 +1,31 @@
 {
+    "emotionBubbles": {
+        "affectionate": "親暱",
+        "shy": "害羞",
+        "afraid": "害怕",
+        "confused": "疑惑",
+        "tired": "疲倦",
+        "proud": "得意",
+        "playful": "調皮",
+        "encouraging": "鼓勵",
+        "thinking": "思考",
+        "curious": "好奇",
+        "disgusted": "嫌棄",
+        "hungry": "嘴饞",
+        "title": "情緒表情包",
+        "description": "每種情緒可新增多張圖片，觸發時隨機顯示，避免連續重複。支援 PNG、GIF、JPEG、WebP，單張最多 8 MB；沒有圖片時使用預設貓圖。",
+        "happy": "開心",
+        "sad": "難過",
+        "angry": "生氣",
+        "surprised": "驚訝",
+        "neutral": "平靜",
+        "upload": "新增圖片",
+        "remove": "刪除",
+        "default": "使用預設貓圖",
+        "saving": "正在儲存…",
+        "saved": "已儲存",
+        "failed": "操作失敗，請重試"
+    },
     "chatAvatar": {
         "custom": {
             "upload": "上傳圖片",

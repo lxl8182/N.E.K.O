@@ -277,8 +277,14 @@ def _soccer_mirror_meta(event):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_mirror_assistant_speech_text_mirror_carries_metadata():
+@pytest.mark.parametrize("text_sent", [True, False])
+async def test_mirror_assistant_speech_text_mirror_carries_metadata(text_sent):
     mgr = _make_manager()
+    original_send = mgr.send_lanlan_response
+    async def deliver(*args, **kwargs):
+        await original_send(*args, **kwargs)
+        return text_sent
+    mgr.send_lanlan_response = deliver
     event = {
         "kind": "opening-line",
         "hasUserSpeech": False,
@@ -294,6 +300,7 @@ async def test_mirror_assistant_speech_text_mirror_carries_metadata():
     )
 
     assert result["ok"] is False
+    assert result["text_sent"] is text_sent
     assert result["reason"] == "tts_unavailable"
     assert result["turn_end_emitted"] is True
     assert result["interrupt_audio"] is False

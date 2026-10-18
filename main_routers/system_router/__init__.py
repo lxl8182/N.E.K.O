@@ -293,6 +293,7 @@ from .break_reminders import (  # noqa: F401
     _render_work_break_game_invite_prompt,
     _deliver_break_reminder_via_llm,
 )
+from . import emotion_bubbles as _emotion_bubbles  # noqa: F401
 from .proactive_chat_flow import (  # noqa: F401
     _proactive_llm_retry_error_types,
     _safe_fire_proactive_done,

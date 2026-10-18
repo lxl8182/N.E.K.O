@@ -3289,6 +3289,7 @@ class TurnMixin:
         wait_for_audio_completion: bool = False,
         audio_completion_timeout: float = 45.0,
         speech_correlation_id: str = "",
+        on_text_delivery: Callable[[str, bool], None] | None = None,
     ) -> dict:
         """Mirror an assistant line + play it through the project TTS pipeline.
 
@@ -3321,8 +3322,9 @@ class TurnMixin:
         normalized_playback_gain = self.remember_speech_playback_gain(turn_id, playback_gain)
         await self.state.fire(SessionEvent.USER_INPUT, sid=turn_id)
 
+        text_sent = False
         if mirror_text:
-            await self.send_lanlan_response(
+            text_sent = bool(await self.send_lanlan_response(
                 clean,
                 is_first_chunk=True,
                 turn_id=turn_id,
@@ -3330,7 +3332,9 @@ class TurnMixin:
                 request_id=request_id,
                 track_ai_turn=False,
                 cache_for_new_session=False,
-            )
+            ))
+            if on_text_delivery is not None:
+                on_text_delivery(turn_id, text_sent)
 
         if cached_chunks is not None:
             self._remember_game_speech_correlation(turn_id, speech_correlation_id)
@@ -3356,6 +3360,7 @@ class TurnMixin:
             return {
                 "ok": audio_sent,
                 "method": "project_tts_cache",
+                "text_sent": text_sent,
                 "cache_status": "hit",
                 "speech_id": turn_id,
                 "audio_sent": audio_sent,
@@ -3474,6 +3479,7 @@ class TurnMixin:
                 else {}
             ),
             "method": "project_tts",
+            "text_sent": text_sent,
             "cache_status": (
                 "miss" if capture_started
                 else "bypass_capacity" if reuse_synthesized_audio

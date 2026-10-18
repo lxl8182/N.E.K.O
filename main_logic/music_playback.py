@@ -88,6 +88,9 @@ def handle_music_playback_state(manager: Any, event: dict[str, Any]) -> bool:
         return False
     manager._music_playback_event_key = event_key
 
+    logger.info("[MusicPlayback] name=%s state=%s track=%s artist=%s",
+                getattr(manager, "lanlan_name", ""), state, name, artist)
+
     if state == "error":
         logger.warning(
             "[%s] 音乐播放器报告失败: reason=%s",
@@ -129,6 +132,9 @@ def handle_music_playback_state(manager: Any, event: dict[str, Any]) -> bool:
         "context_type": "music_playback",
     }
 
+    sink = getattr(manager, "_takeover_callback_sink", None)
+    if getattr(manager, "_takeover_active", False) and callable(sink) and sink(callback):
+        return True
     enqueue = getattr(manager, "enqueue_agent_callback", None)
     if not callable(enqueue):
         return False
