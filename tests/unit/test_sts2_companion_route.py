@@ -36,7 +36,7 @@ def test_text_voice_reload_and_stale_output_have_one_owner(monkeypatch):
         await route.output({**new, "line": "我在呢", "output_id": "reply", "wait_audio": True})
         assert manager.mirror_assistant_speech.await_count == 1
         assert manager.mirror_assistant_speech.call_args.kwargs["metadata"]["mirror"]["kind"] == "sts2"
-        assert manager.mirror_assistant_speech.call_args.kwargs["metadata"]["mirror"]["event"]["speech_kind"] == "tactical"
+        assert manager.mirror_assistant_speech.call_args.kwargs["metadata"]["mirror"]["event"]["speech_kind"] == "chat"
         # 文本送达后TTS失败，普通回复仍只交付一次；战术重试只重做音频。
         manager.mirror_assistant_speech.return_value = {"ok": False, "text_sent": True, "audio_completed": False, "reason": "audio_completion_timeout"}
         failed = {**new, "line": "这次先稳住", "output_id": "audio-retry"}
@@ -129,5 +129,39 @@ def test_checkpoint_restores_only_same_run_and_main_menu_clears_seed(monkeypatch
         result = await route.poll({**fresh, "instance": "three", "anchor": {"run_id": None}})
         assert result["checkpoint"] == {} and result["dialogue_seed"] == []
         assert result["persona"] == "主人格" and result["background"] == "长期背景"
+
+    asyncio.run(run())
+
+
+def test_output_keeps_anchor_speech_kind_while_waiting_audio(monkeypatch):
+    manager = SimpleNamespace(session=SimpleNamespace(_instructions="共享记忆", _conversation_history=[]),
+        lanlan_prompt="宿主最终人格", takeover_owner=lambda: None,
+        acquire_takeover=lambda *a, **kw: object(), release_takeover=lambda token: True,
+        interrupt_ordinary_speech_for_takeover=AsyncMock(), mirror_user_input=AsyncMock(),
+        mirror_assistant_speech=AsyncMock(return_value={"ok": True, "text_sent": True, "audio_completed": True}),
+        websocket=SimpleNamespace(client_state=WebSocketState.CONNECTED), send_lanlan_response=AsyncMock(return_value=True))
+    monkeypatch.setattr(route, "get_session_manager", lambda: {"小铃": manager})
+    monkeypatch.setattr(route, "get_config_manager", lambda: SimpleNamespace(get_character_data=lambda: ("主人", "小铃")))
+    monkeypatch.setattr(route, "is_route_slot_taken", lambda *a, **kw: False)
+    monkeypatch.setattr(route, "_sessions", {})
+
+    async def body(request):
+        return request
+
+    monkeypatch.setattr(route, "_body", body)
+
+    async def run():
+        payload = {"name": "小铃", "instance": "one", "claim": True, "anchor": {"run_id": "r"}}
+        await route.poll(payload)
+        await route.output({**payload, "line": "今天好累", "output_id": "chat-1", "wait_audio": True,
+                            "anchor": {"run_id": "r", "speech_kind": "chat"}})
+        mirror = manager.mirror_assistant_speech.await_args.kwargs
+        assert mirror["metadata"]["mirror"]["event"]["speech_kind"] == "chat"
+        assert mirror["wait_for_audio_completion"] is True
+        await route.output({**payload, "line": "这回合先防住", "output_id": "tac-1", "wait_audio": True,
+                            "anchor": {"run_id": "r", "speech_kind": "tactical"}})
+        mirror = manager.mirror_assistant_speech.await_args.kwargs
+        assert mirror["metadata"]["mirror"]["event"]["speech_kind"] == "tactical"
+        assert mirror["wait_for_audio_completion"] is True
 
     asyncio.run(run())

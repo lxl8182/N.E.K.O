@@ -254,8 +254,7 @@ async def output(request: Request):
         state["outputs"].pop(next(iter(state["outputs"])))
     task = asyncio.create_task(state["manager"].mirror_assistant_speech(
         line, metadata=build_mirror_meta(source="sts2_companion", kind="sts2", session_id=state["instance"],
-                                      event={**(data.get("anchor") or {}), "speech_kind": "tactical" if data.get("wait_audio")
-                                             else (data.get("anchor") or {}).get("speech_kind", "chat")}), request_id=output_id,
+                                      event={**(data.get("anchor") or {}), "speech_kind": (data.get("anchor") or {}).get("speech_kind", "chat")}), request_id=output_id,
         wait_for_audio_completion=bool(data.get("wait_audio")), interrupt_audio=False,
         mirror_text=not bool(previous and previous.get("text_sent")),
         on_text_delivery=lambda speech_id, sent: state["outputs"][output_id].update(text_sent=sent, speech_id=speech_id)))
